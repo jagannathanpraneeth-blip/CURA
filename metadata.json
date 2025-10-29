@@ -1,0 +1,7 @@
+{
+  "name": "Cura AI – Intelligent Medical & Wellness Assistant",
+  "description": "Cura AI is a 24/7 intelligent medical companion to help users between doctor visits — interpreting lab reports, understanding symptoms, and explaining prescriptions.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
