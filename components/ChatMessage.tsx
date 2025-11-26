@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { User, Bot, Volume2, VolumeX } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { Message, ChatRole } from '../types';
 
 interface ChatMessageProps {
@@ -20,9 +20,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, index, onPlayAudio, 
           <Bot className="w-5 h-5" />
         </div>
       )}
-      <div className="flex flex-col items-start">
+      <div className="flex flex-col items-start max-w-[85%] md:max-w-xl">
          <div
-            className={`max-w-xl p-3 rounded-lg ${
+            className={`p-3 rounded-lg w-full ${
             isUser
                 ? 'bg-cyan-500 text-white rounded-br-none'
                 : 'bg-slate-100 text-slate-800 rounded-bl-none'
@@ -32,10 +32,12 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, index, onPlayAudio, 
             <img
                 src={message.image}
                 alt="User upload"
-                className="rounded-md mb-2 max-w-xs"
+                className="rounded-md mb-2 max-w-xs object-contain bg-black/5"
             />
             )}
-            <p className="whitespace-pre-wrap">{message.text}</p>
+            <div className={`prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-slate'}`}>
+                <ReactMarkdown>{message.text}</ReactMarkdown>
+            </div>
         </div>
         {!isUser && message.text && (
             <button 

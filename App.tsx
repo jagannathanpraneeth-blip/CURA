@@ -1,14 +1,29 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ChatInterface from './components/ChatInterface';
 import Disclaimer from './components/Disclaimer';
 import FeatureCard from './components/FeatureCard';
+import ConsentModal from './components/ConsentModal';
+import OfflineIndicator from './components/OfflineIndicator';
 import { ChatMode } from './types';
 import { FEATURES } from './constants';
+import { storageService } from './services/storageService';
+import LoadingSpinner from './components/LoadingSpinner';
 
 const App: React.FC = () => {
   const [chatMode, setChatMode] = useState<ChatMode | null>(null);
+  const [hasConsented, setHasConsented] = useState<boolean>(false);
+  const [isCheckingConsent, setIsCheckingConsent] = useState<boolean>(true);
+
+  useEffect(() => {
+    const checkUserConsent = async () => {
+      const consented = await storageService.checkConsent();
+      setHasConsented(consented);
+      setIsCheckingConsent(false);
+    };
+    checkUserConsent();
+  }, []);
 
   const handleSelectMode = (mode: ChatMode) => {
     setChatMode(mode);
@@ -18,12 +33,27 @@ const App: React.FC = () => {
     setChatMode(null);
   };
 
+  const handleAcceptConsent = async () => {
+    await storageService.setConsent(true);
+    setHasConsented(true);
+  };
+
+  if (isCheckingConsent) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 text-slate-800">
+      {!hasConsented && <ConsentModal onAccept={handleAcceptConsent} />}
+      <OfflineIndicator />
       <Header onBack={chatMode ? handleBack : undefined} />
-      <main className="flex-grow container mx-auto p-4 flex flex-col">
+      <main className="flex-grow container mx-auto p-4 flex flex-col relative">
         {chatMode === null ? (
-          <div className="flex flex-col items-center justify-center flex-grow text-center">
+          <div className="flex flex-col items-center justify-center flex-grow text-center animate-in fade-in duration-500">
              <div className="max-w-3xl mx-auto">
               <h1 className="text-4xl md:text-5xl font-bold text-slate-800">
                 Welcome to <span className="text-cyan-600">Cura AI</span>

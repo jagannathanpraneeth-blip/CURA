@@ -1,46 +1,50 @@
-import { GoogleGenAI } from "@google/genai";
-import { SYSTEM_INSTRUCTION } from '../constants';
+import { storageService } from './storageService';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
+const API_URL = 'http://localhost:3000/api';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-const fileToGenerativePart = async (file: File) => {
-  const base64EncodedDataPromise = new Promise<string>((resolve) => {
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
     reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
   });
-  return {
-    inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-  };
 };
 
-export const generateResponse = async (prompt: string, imageFile?: File): Promise<string> => {
+export const generateResponse = async (mode: string, prompt: string, imageFile?: File): Promise<string> => {
   try {
-    const model = 'gemini-2.5-flash';
-    // Fix: Explicitly type `parts` to allow a union of text and inlineData parts.
-    const parts: ({ text: string } | { inlineData: { data: string; mimeType: string } })[] = [{ text: prompt }];
+    const userId = storageService.getUserId();
+    let imageBase64 = undefined;
 
     if (imageFile) {
-      const imagePart = await fileToGenerativePart(imageFile);
-      parts.unshift(imagePart); // Image first, then text
+      imageBase64 = await fileToBase64(imageFile);
     }
 
-    const response = await ai.models.generateContent({
-      model,
-      contents: { parts },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.5,
+    const response = await fetch(`${API_URL}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        userId,
+        mode,
+        message: prompt,
+        image: imageBase64
+      }),
     });
 
-    return response.text;
-  } catch (error) {
-    console.error("Error generating response from Gemini:", error);
-    return "I'm sorry, but I encountered an error while processing your request. Please check your connection and API key, then try again.";
+    if (!response.ok) {
+      throw new Error(`Server returned status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.text;
+
+  } catch (error: any) {
+    console.error("Error calling backend:", error);
+    if (error.message && error.message.includes('Failed to fetch')) {
+        throw new Error("Cannot connect to backend server. Is 'node server.js' running?");
+    }
+    throw error;
   }
 };
